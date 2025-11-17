@@ -1,9 +1,17 @@
-"""Helper signatures: now_ms, b64e, b64d, sha256_hex."""
+import time
+import os
+import hashlib
+import base64
 
-def now_ms(): raise NotImplementedError
+def now_ms() -> int:
+    """Returns current Unix timestamp in milliseconds."""
+    return int(time.time() * 1000)
 
-def b64e(b: bytes): raise NotImplementedError
+def generate_nonce(length=16) -> str:
+    """Generates a random nonce encoded in Base64."""
+    return base64.b64encode(os.urandom(length)).decode('utf-8')
 
-def b64d(s: str): raise NotImplementedError
-
-def sha256_hex(data: bytes): raise NotImplementedError
+def read_file(path: str) -> str:
+    """Reads a text file and returns content (e.g., for loading PEMs)."""
+    with open(path, 'r') as f:
+        return f.read()
