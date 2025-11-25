@@ -69,6 +69,15 @@ def get_user(username):
     conn.close()
     return row # (email, username, salt_bytes, pwd_hash)
 
+def get_user_by_email(email):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT email, username, salt, pwd_hash FROM users WHERE email = %s", (email,))
+    row = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return row
+
 if __name__ == "__main__":
     import sys
     if "--init" in sys.argv:

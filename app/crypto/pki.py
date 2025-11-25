@@ -3,7 +3,7 @@ from cryptography import x509
 from cryptography.x509.oid import NameOID
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import padding # <--- ADDED THIS
+from cryptography.hazmat.primitives.asymmetric import padding
 
 CA_CERT_PATH = "certs/ca_cert.pem"
 
@@ -34,17 +34,28 @@ def verify_certificate(cert_pem: str, expected_cn: str = None) -> bool:
         root_ca = load_root_ca()
         
         # 3. Verify Signature (Chain of Trust)
-        # We use the Root CA's public key to verify the signature on the received cert
         root_ca.public_key().verify(
             cert.signature,
             cert.tbs_certificate_bytes,
-            padding.PKCS1v15(), # <--- FIXED: Uses the correct imported padding module
+            padding.PKCS1v15(),
             cert.signature_hash_algorithm,
         )
 
-        # 4. Verify Expiry (NotBefore / NotAfter)
-        now = datetime.datetime.utcnow()
-        if now < cert.not_valid_before or now > cert.not_valid_after:
+        # 4. Verify Expiry (Timezone Aware)
+        # We use UTC to avoid deprecation warnings
+        now = datetime.datetime.now(datetime.timezone.utc)
+        
+        # Handle new and old cryptography versions just in case, but prefer UTC properties
+        not_before = cert.not_valid_before_utc if hasattr(cert, "not_valid_before_utc") else cert.not_valid_before
+        not_after = cert.not_valid_after_utc if hasattr(cert, "not_valid_after_utc") else cert.not_valid_after
+
+        # Ensure comparison is timezone-aware
+        if not_before.tzinfo is None:
+            not_before = not_before.replace(tzinfo=datetime.timezone.utc)
+        if not_after.tzinfo is None:
+            not_after = not_after.replace(tzinfo=datetime.timezone.utc)
+
+        if now < not_before or now > not_after:
             print(f"[!] Certificate expired or not yet valid.")
             return False
 
